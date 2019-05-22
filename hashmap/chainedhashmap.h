@@ -1,6 +1,9 @@
 #pragma once
 #include <list>
 
+// A chained hashmap
+// Written by ItsNorin      https://github.com/ItsNorin/
+
 #define HASHMAP_BASIC_SIZE 64 // default starting size for hashmap
 #define LONGEST_ACCEPTABLE_CHAIN_LENGTH 4 // longest length any chain can be, will re-size table when a chain exceeds this limit
 #define GROWTH_RATE 3/2 // new table size will be the number of elements it currently holds * GROWTH_RATE
