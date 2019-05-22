@@ -23,6 +23,9 @@ public:
 	// must be given a hasher function, which can hash the key into an unsigned integer
 	// size is the starting width of the hashmap, will change if the hashmap gets a chain longer than LONGEST_ACCEPTABLE_CHAIN_LENGTH
 	ChainedHashMap(unsigned(*hasher)(const KeyT &), unsigned size = HASHMAP_BASIC_SIZE);
+	// copy an existing hashmap
+	ChainedHashMap(const ChainedHashMap &map);
+
 	~ChainedHashMap();
 
 	// insert an entry into hashmap
@@ -69,6 +72,18 @@ template<typename KeyT, typename DataT>
 ChainedHashMap<KeyT, DataT>::ChainedHashMap(unsigned(*hasher)(const KeyT &), unsigned size)
 	: hasher_(hasher), table_(new std::list<Entry>[size]), tableSize_(size), entryCount_(0), longestChainLength_(0)
 {}
+
+template<typename KeyT, typename DataT>
+inline ChainedHashMap<KeyT, DataT>::ChainedHashMap(const ChainedHashMap &map) 
+	: hasher_(map.hasher_), table_(new std::list<Entry>[map.tableSize_]), tableSize_(map.tableSize_), 
+	  entryCount_(map.entryCount_), longestChainLength_(map.longestChainLength_) 
+{
+	for (unsigned i = 0; i < tableSize_; i++) {
+		std::list<Entry> &list = map.table_[i];
+		for (auto it = list.begin(); it != list.end(); ++it)
+			table_[hasher_((*it).key) % tableSize_].push_back((*it));
+	}
+}
 
 
 template<typename KeyT, typename DataT>
