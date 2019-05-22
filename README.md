@@ -1,2 +1,4 @@
 # data_structures
-some random data structures I wrote
+Some data structures I wrote
+
+Inludes a linked list, an AVL search tree, and a hashmap
