@@ -21,8 +21,13 @@ public:
 public:
 	// creates a hashmap
 	// must be given a hasher function, which can hash the key into an unsigned integer
+	//
+	// hasher should return a value >= the number of entries the hashmap is going to store, 
+	// which should aim to distribute the entries evenly throughout the table
+	//
 	// size is the starting width of the hashmap, will change if the hashmap gets a chain longer than LONGEST_ACCEPTABLE_CHAIN_LENGTH
 	ChainedHashMap(unsigned(*hasher)(const KeyT &), unsigned size = HASHMAP_BASIC_SIZE);
+
 	// copy an existing hashmap
 	ChainedHashMap(const ChainedHashMap &map);
 
@@ -46,6 +51,19 @@ public:
 	// number of entries hashmap is storing
 	unsigned entries() const;
 
+	// length of longest chain in hashmap
+	unsigned longestChain() const;
+
+	// size of internal table
+	unsigned tableSize() const;
+
+	// resizes the hashmap to hold entries() * GROWTH_RATE in its first layer
+	void resize();
+
+	// resizes to given size unless it is too small to hold all entries 
+	// while keeping longestChain below LONGEST_ACCEPTABLE_CHAIN_LENGTH
+	// returns true if resized, otherwise false
+	bool resize(unsigned newTableSize);
 
 protected:
 	// hashmap body
@@ -62,8 +80,10 @@ protected:
 	unsigned longestChainLength_;
 
 protected:
-	// resizes hashmap if chains are growing too long
-	void resize_();
+	// forces table to resize to given size
+	// table will re-size itsself again if a new entry is inserted and 
+	// longestChainLength exceeds LONGEST_ACCEPTABLE_CHAIN_LENGTH
+	void resizeForce_(unsigned int size);
 };
 
 
@@ -105,10 +125,15 @@ inline bool ChainedHashMap<KeyT, DataT>::insert(const Entry &e) {
 	chosenList.push_back(e);
 	
 	// clean up table if needed
-	longestChainLength_ = (chosenList.size() > longestChainLength_) ? chosenList.size() : longestChainLength_;
+	if (longestChainLength_ < chosenList.size())
+		longestChainLength_ = chosenList.size();
+	
 	entryCount_++;
 
-	resize_();
+	// resize table if a chain gets too long
+	if (longestChainLength_ > LONGEST_ACCEPTABLE_CHAIN_LENGTH)	
+		resize();
+
 	return true;
 }
 
@@ -151,22 +176,46 @@ inline unsigned ChainedHashMap<KeyT, DataT>::entries() const {
 	return entryCount_; 
 }
 
+template<typename KeyT, typename DataT>
+inline unsigned ChainedHashMap<KeyT, DataT>::longestChain() const {
+	return longestChainLength_;
+}
 
 template<typename KeyT, typename DataT>
-inline void ChainedHashMap<KeyT, DataT>::resize_() {
-	if (longestChainLength_ > LONGEST_ACCEPTABLE_CHAIN_LENGTH) {
-		unsigned newTableSize = (unsigned)(entryCount_ * GROWTH_RATE);
-		std::list<Entry> *newTable = new std::list<Entry>[newTableSize];
-
-		for (unsigned i = 0; i < tableSize_; i++) {
-			std::list<Entry> &originList = table_[i];
-			for (auto it = originList.begin(); it != originList.end(); ++it)
-				newTable[hasher_((*it).key) % newTableSize].push_back((*it));
-		}
-
-		longestChainLength_ = 1;
-		delete[] table_;
-		table_ = newTable;
-		tableSize_ = newTableSize;
-	}
+inline unsigned ChainedHashMap<KeyT, DataT>::tableSize() const {
+	return tableSize_;
 }
+
+template<typename KeyT, typename DataT>
+inline void ChainedHashMap<KeyT, DataT>::resizeForce_(unsigned int newTableSize) {
+	std::list<Entry> *newTable = new std::list<Entry>[newTableSize];
+
+	for (unsigned i = 0; i < tableSize_; i++) {
+		std::list<Entry> &originList = table_[i];
+		for (auto it = originList.begin(); it != originList.end(); ++it)
+			newTable[hasher_((*it).key) % newTableSize].push_back((*it));
+	}
+
+	longestChainLength_ = 1;
+	delete[] table_;
+	table_ = newTable;
+	tableSize_ = newTableSize;
+}
+
+
+template<typename KeyT, typename DataT>
+inline void ChainedHashMap<KeyT, DataT>::resize() {
+	resizeForce_(entryCount_ * (unsigned)GROWTH_RATE);
+}
+
+
+template<typename KeyT, typename DataT>
+inline bool ChainedHashMap<KeyT, DataT>::resize(unsigned newTableSize) {
+	if (entryCount_ / newTableSize <= LONGEST_ACCEPTABLE_CHAIN_LENGTH) {
+		resizeForce_(newTableSize);
+		return true;
+	}
+	return false;
+}
+
+
