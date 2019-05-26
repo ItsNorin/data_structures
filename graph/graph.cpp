@@ -50,6 +50,16 @@ bool Graph::insert(const PointT &point) {
 	return map_.insert(std::make_pair(point, Graph::Node(point))).second;
 }
 
+bool Graph::remove(const PointT &point) {
+	Node *toDel = &map_[point];
+	// remove all links to node
+	while (toDel->links.size() > 0) 
+		toDel->links[0].first->unlink(toDel);
+		
+	map_.erase(toDel->point);
+	return false; 
+}
+
 void Graph::link(const PointT &point, const PointT &neighbor, const int weight) {
 	map_[point].link(&map_[neighbor], weight);
 }

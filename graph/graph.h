@@ -20,8 +20,18 @@ protected:
 	std::unordered_map<PointT, Node> map_;
 
 public:
+	// inserts a point into graph
+	// true if insertion was successful
 	bool insert(const PointT &point);
+
+	// removes a point from graph
+	// false if point wasn't in graph
+	bool remove(const PointT &point);
+
+	// links two points together with a given weight
 	void link(const PointT &point, const PointT &neighbor, const int weight);
+
+	// unlinks two points
 	void unlink(const PointT &point, const PointT &neighbor);
 };
 
